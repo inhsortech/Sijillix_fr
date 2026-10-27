@@ -1,0 +1,6 @@
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import api from "../../api/api";
+export const fetchEmployees = createAsyncThunk("employees/fetch", async (params = {}, { rejectWithValue }) => { try { const { data } = await api.get("/employees", { params }); return data; } catch (error) { return rejectWithValue(error.response?.data?.message || "Unable to load employees"); } });
+export const createEmployee = createAsyncThunk("employees/create", async (employee, { rejectWithValue }) => { try { const { data } = await api.post("/employees", employee); return data; } catch (error) { return rejectWithValue(error.response?.data?.message || "Unable to create employee"); } });
+const slice = createSlice({ name: "employees", initialState: { items: [], total: 0, loading: false, error: null }, reducers: {}, extraReducers: b => { b.addCase(fetchEmployees.pending, s => { s.loading = true; s.error = null; }).addCase(fetchEmployees.fulfilled, (s,a) => { s.loading = false; s.items = a.payload.employees; s.total = a.payload.total; }).addCase(fetchEmployees.rejected, (s,a) => { s.loading = false; s.error = a.payload; }).addCase(createEmployee.fulfilled, (s,a) => { s.items.unshift(a.payload); s.total += 1; }).addCase(createEmployee.rejected, (s,a) => { s.error = a.payload; }); } });
+export default slice.reducer;
