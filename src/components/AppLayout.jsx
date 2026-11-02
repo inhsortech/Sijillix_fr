@@ -1,8 +1,77 @@
 import { Layout, Menu, Typography, Avatar, Dropdown, Space } from "antd";
-import { DashboardOutlined, TeamOutlined, FileProtectOutlined, CheckSquareOutlined, LogoutOutlined, GlobalOutlined } from "@ant-design/icons";
+import {
+  DashboardOutlined,
+  TeamOutlined,
+  FileProtectOutlined,
+  CheckSquareOutlined,
+  LogoutOutlined,
+  GlobalOutlined,
+} from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../features/auth/authSlice";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 const { Sider, Header, Content } = Layout;
-const items = [{ key: "/", icon: <DashboardOutlined />, label: "Dashboard" }, { key: "/employees", icon: <TeamOutlined />, label: "Employees" }, { key: "/documents", icon: <FileProtectOutlined />, label: "Documents" }, { key: "/tasks", icon: <CheckSquareOutlined />, label: "Renewals & Tasks" }];
-export default function AppLayout() { const navigate = useNavigate(); const dispatch = useDispatch(); const location = useLocation(); const user = useSelector(s => s.auth.user); return <Layout style={{ minHeight: "100vh" }}><Sider breakpoint="lg" collapsedWidth="0" theme="dark" width={245}><div className="brand"><FileProtectOutlined /><span>DocuTrack</span></div><Menu theme="dark" mode="inline" selectedKeys={[location.pathname]} items={items} onClick={({key}) => navigate(key)} /><div className="sidebar-footer">Saudi Arabia · Compliance</div></Sider><Layout><Header className="topbar"><Space><GlobalOutlined /><Typography.Text>Saudi Arabia</Typography.Text><Typography.Text type="secondary">|</Typography.Text><Typography.Text>English</Typography.Text></Space><Dropdown trigger={["click"]} menu={{ items: [{ key: "logout", icon: <LogoutOutlined />, label: "Sign out", onClick: () => { dispatch(logout()); navigate("/login", { replace: true }); } }] }}><Space style={{cursor:"pointer"}}><Avatar>{user?.name?.charAt(0) || "U"}</Avatar><span>{user?.name || "Account"}</span></Space></Dropdown></Header><Content className="page-content"><Outlet /></Content></Layout></Layout>; }
+const items = [
+  { key: "/", icon: <DashboardOutlined />, label: "Dashboard" },
+  { key: "/employees", icon: <TeamOutlined />, label: "Employees" },
+  { key: "/documents", icon: <FileProtectOutlined />, label: "Documents" },
+  { key: "/tasks", icon: <CheckSquareOutlined />, label: "Renewals & Tasks" },
+];
+export default function AppLayout() {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const location = useLocation();
+  const user = useSelector((s) => s.auth.user);
+  return (
+    <Layout style={{ minHeight: "100vh" }}>
+      <Sider breakpoint="lg" collapsedWidth="0" theme="dark" width={245}>
+        <div className="brand">
+          <FileProtectOutlined />
+          <span>DocuTrack</span>
+        </div>
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={[location.pathname]}
+          items={items}
+          onClick={({ key }) => navigate(key)}
+        />
+        <div className="sidebar-footer">Saudi Arabia · Compliance</div>
+      </Sider>
+      <Layout>
+        <Header className="topbar">
+          <Space>
+            <GlobalOutlined />
+            <Typography.Text>Saudi Arabia</Typography.Text>
+            <Typography.Text type="secondary">|</Typography.Text>
+            <Typography.Text>English</Typography.Text>
+          </Space>
+          <Dropdown
+            trigger={["click"]}
+            menu={{
+              items: [
+                {
+                  key: "logout",
+                  icon: <LogoutOutlined />,
+                  label: "Sign out",
+                  onClick: () => {
+                    dispatch(logout());
+                    navigate("/login", { replace: true });
+                  },
+                },
+              ],
+            }}
+          >
+            <Space style={{ cursor: "pointer" }}>
+              <Avatar>{user?.name?.charAt(0) || "U"}</Avatar>
+              <span>{user?.name || "Account"}</span>
+            </Space>
+          </Dropdown>
+        </Header>
+        <Content className="page-content">
+          <Outlet />
+        </Content>
+      </Layout>
+    </Layout>
+  );
+}
