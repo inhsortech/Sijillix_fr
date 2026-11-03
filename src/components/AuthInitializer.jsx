@@ -1,45 +1,43 @@
-
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  restoreSession,
-  sessionAbsent,
-} from "../features/auth/authSlice";
 import { Spin } from "antd";
 
-const AuthInitializer = ({ children }) => {
-  const dispatch = useDispatch();
+import { restoreSession } from "../features/auth/authSlice";
 
+export default function AuthInitializer({ children }) {
+  const dispatch = useDispatch();
   const initialized = useSelector(
     (state) => state.auth.initialized
   );
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
+  const started = useRef(false);
 
-    if (token) {
+  useEffect(() => {
+    if (started.current) return;
+
+    started.current = true;
+
+    if (localStorage.getItem("token")) {
       dispatch(restoreSession());
     } else {
-      dispatch(sessionAbsent());
+      // No token: initialization is complete.
+      dispatch({
+        type: "auth/noSession",
+      });
     }
   }, [dispatch]);
 
   if (!initialized) {
     return (
-      <div
-        style={{
-          height: "100vh",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <Spin size="large" tip="Restoring session..." />
+      <div style={{
+        height: "100vh",
+        display: "grid",
+        placeItems: "center",
+      }}>
+        <Spin size="large" />
       </div>
     );
   }
 
   return children;
-};
-
-export default AuthInitializer;
+}

@@ -1,151 +1,173 @@
-import { useEffect } from "react";
+
+import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import {
   Row,
   Col,
   Card,
   Statistic,
-  Table,
-  Tag,
-  Typography,
   Spin,
   Alert,
-  Button,
+  Select,
+  Empty,
+  message,
 } from "antd";
-import {
-  TeamOutlined,
-  FileProtectOutlined,
-  WarningOutlined,
-  ClockCircleOutlined,
-  ReloadOutlined,
-} from "@ant-design/icons";
-import { useDispatch, useSelector } from "react-redux";
-import { fetchDashboard } from "../features/dashboard/dashboardSlice";
-const { Title, Text } = Typography;
+import api from "../api/api";
+
 export default function Dashboard() {
-  const dispatch = useDispatch();
-  const { data, loading, error } = useSelector((s) => s.dashboard);
+  const user = useSelector((state) => state.auth.user);
+  const isSuperAdmin = user?.role === "super_admin";
+
+  const [organizations, setOrganizations] = useState([]);
+  const [selectedOrg, setSelectedOrg] = useState(
+    localStorage.getItem("selectedOrganizationId") || undefined
+  );
+
+  const [statistics, setStatistics] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Load organizations for Super Admin
   useEffect(() => {
-    dispatch(fetchDashboard());
-  }, [dispatch]);
-  const columns = [
-    { title: "Document", dataIndex: "title", key: "title" },
-    {
-      title: "Type",
-      dataIndex: "type",
-      key: "type",
-      render: (v) => <Tag>{v?.replaceAll("_", " ").toUpperCase()}</Tag>,
-    },
-    {
-      title: "Employee",
-      dataIndex: ["employeeId", "name"],
-      key: "employee",
-      render: (v) => v || "Company document",
-    },
-    {
-      title: "Expiry date",
-      dataIndex: "expiryDate",
-      key: "expiry",
-      render: (v) => (v ? new Date(v).toLocaleDateString() : "Not specified"),
-    },
-  ];
-  if (loading && !data) return <Spin size="large" />;
+    if (!isSuperAdmin) return;
+
+    const loadOrganizations = async () => {
+      try {
+        const { data } = await api.get("/organizations");
+        const activeOrganizations = (data.organizations || []).filter(
+          (org) => org.active
+        );
+
+        setOrganizations(activeOrganizations);
+
+        const savedId = localStorage.getItem("selectedOrganizationId");
+
+        if (savedId && activeOrganizations.some((org) => org._id === savedId)) {
+          setSelectedOrg(savedId);
+        } else {
+          setSelectedOrg(undefined);
+          localStorage.removeItem("selectedOrganizationId");
+          localStorage.removeItem("selectedOrganizationName");
+        }
+      } catch (error) {
+        message.error(
+          error.response?.data?.message || "Unable to load organizations"
+        );
+      }
+    };
+
+    loadOrganizations();
+  }, [isSuperAdmin]);
+
+  // Load dashboard statistics
+  useEffect(() => {
+    if (isSuperAdmin && !selectedOrg) {
+      setStatistics(null);
+      setLoading(false);
+      return;
+    }
+
+    let active = true;
+
+    const loadDashboard = async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const url = isSuperAdmin
+          ? `/dashboard?organizationId=${encodeURIComponent(selectedOrg)}`
+          : "/dashboard";
+
+        const { data } = await api.get(url);
+
+        if (active) {
+          setStatistics(data.statistics);
+        }
+      } catch (err) {
+        if (active) {
+          setError(
+            err.response?.data?.message || "Dashboard failed to load"
+          );
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    loadDashboard();
+
+    return () => {
+      active = false;
+    };
+  }, [isSuperAdmin, selectedOrg]);
+
+  const handleOrganizationChange = (organizationId) => {
+    setSelectedOrg(organizationId);
+
+    const org = organizations.find((item) => item._id === organizationId);
+
+    localStorage.setItem("selectedOrganizationId", organizationId);
+    localStorage.setItem("selectedOrganizationName", org?.name || "");
+  };
+
+  if (isSuperAdmin && !organizations.length) {
+    return <Empty description="No active organizations found" />;
+  }
+
   return (
     <>
-      <div className="page-heading">
-        <div>
-          <Title level={2}>Compliance Overview</Title>
-          <Text type="secondary">
-            Monitor employee documents, company licences and renewals.
-          </Text>
-        </div>
-        <Button
-          icon={<ReloadOutlined />}
-          onClick={() => dispatch(fetchDashboard())}
-          loading={loading}
-        >
-          Refresh
-        </Button>
-      </div>
-      {error && (
+      <Row justify="space-between" align="middle" style={{ marginBottom: 20 }}>
+        <Col>
+          <h2>Dashboard</h2>
+        </Col>
+
+        {isSuperAdmin && (
+          <Col>
+            <Select
+              showSearch
+              optionFilterProp="label"
+              placeholder="Select Organization"
+              style={{ width: 280 }}
+              value={selectedOrg}
+              onChange={handleOrganizationChange}
+              options={organizations.map((org) => ({
+                value: org._id,
+                label: `${org.name} (${org.code})`,
+              }))}
+            />
+          </Col>
+        )}
+      </Row>
+
+      {isSuperAdmin && !selectedOrg && (
         <Alert
-          style={{ marginTop: 16 }}
-          type="error"
-          message={error}
+          type="info"
           showIcon
+          message="Select an organization to view its dashboard"
         />
       )}
-      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-        <Col xs={24} sm={12} xl={6}>
-          <Card>
-            <Statistic
-              title="Total employees"
-              value={data?.employees?.total ?? 0}
-              prefix={<TeamOutlined />}
-            />
-            <Text type="secondary">{data?.employees?.active ?? 0} active</Text>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} xl={6}>
-          <Card>
-            <Statistic
-              title="Documents"
-              value={data?.documents?.total ?? 0}
-              prefix={<FileProtectOutlined />}
-            />
-            <Text type="secondary">
-              {data?.documents?.pendingVerification ?? 0} pending verification
-            </Text>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} xl={6}>
-          <Card>
-            <Statistic
-              title="Expired documents"
-              value={data?.documents?.expired ?? 0}
-              valueStyle={{ color: "#cf1322" }}
-              prefix={<WarningOutlined />}
-            />
-            <Text type="secondary">Require attention</Text>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} xl={6}>
-          <Card>
-            <Statistic
-              title="Expiring in 30 days"
-              value={data?.documents?.expiringIn30Days ?? 0}
-              prefix={<ClockCircleOutlined />}
-            />
-            <Text type="secondary">
-              {data?.tasks?.overdue ?? 0} overdue tasks
-            </Text>
-          </Card>
-        </Col>
-      </Row>
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        <Col xs={24} md={8}>
-          <Card title="Compliance score">
-            <Statistic
-              value={data?.complianceScore ?? 0}
-              suffix="%"
-              valueStyle={{ color: "#1677ff" }}
-            />
-            <Text type="secondary">Preliminary expiry-based indicator</Text>
-          </Card>
-        </Col>
-        <Col xs={24} md={16}>
-          <Card title="Upcoming document expiries">
-            <Table
-              rowKey="_id"
-              columns={columns}
-              dataSource={data?.priorityDocuments ?? []}
-              loading={loading}
-              pagination={{ pageSize: 5 }}
-              scroll={{ x: 600 }}
-              locale={{ emptyText: "No upcoming expiries" }}
-            />
-          </Card>
-        </Col>
-      </Row>
+
+      {loading && <Spin size="large" />}
+
+      {error && <Alert type="error" message={error} />}
+
+      {!loading && statistics && (
+        <Row gutter={[16, 16]}>
+          {[
+            ["Employees", statistics.employees],
+            ["Documents", statistics.documents],
+            ["Total Tasks", statistics.tasks],
+            ["Pending Tasks", statistics.pendingTasks],
+            ["Completed Tasks", statistics.completedTasks],
+          ].map(([title, value]) => (
+            <Col xs={24} sm={12} lg={8} key={title}>
+              <Card>
+                <Statistic title={title} value={value ?? 0} />
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      )}
     </>
   );
 }

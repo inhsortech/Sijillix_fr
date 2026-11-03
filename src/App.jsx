@@ -1,26 +1,29 @@
-
 import { Navigate, Route, Routes } from "react-router-dom";
-import { Result, Button } from "antd";
 
-import AppLayout from "./components/AppLayout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Employees from "./pages/Employees";
 import Documents from "./pages/Documents";
 import Tasks from "./pages/Tasks";
-import ProtectedRoute from "./components/ProtectedRoute";
+import Users from "./pages/Users";
+import Organizations from "./pages/Organizations";
 
-function NotFound() {
+import AppLayout from "./components/AppLayout";
+import ProtectedRoute from "./components/ProtectedRoute";
+import PermissionGate from "./components/PermissionGate";
+
+function PageNotFound() {
+  return <h2>404 - Page not found</h2>;
+}
+
+function ProtectedPage({ permission, children }) {
   return (
-    <Result
-      status="404"
-      title="Page not found"
-      extra={
-        <Button type="primary" href="/">
-          Back to dashboard
-        </Button>
-      }
-    />
+    <PermissionGate
+      permission={permission}
+      fallback={<Navigate to="/" replace />}
+    >
+      {children}
+    </PermissionGate>
   );
 }
 
@@ -32,13 +35,55 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
           <Route index element={<Dashboard />} />
-          <Route path="/employees" element={<Employees />} />
-          <Route path="/documents" element={<Documents />} />
-          <Route path="/tasks" element={<Tasks />} />
+
+          <Route
+            path="/organizations"
+            element={
+              <ProtectedPage permission="organizations:manage">
+                <Organizations />
+              </ProtectedPage>
+            }
+          />
+
+          <Route
+            path="/users"
+            element={
+              <ProtectedPage permission="users:read">
+                <Users />
+              </ProtectedPage>
+            }
+          />
+
+          <Route
+            path="/employees"
+            element={
+              <ProtectedPage permission="employees:read">
+                <Employees />
+              </ProtectedPage>
+            }
+          />
+
+          <Route
+            path="/documents"
+            element={
+              <ProtectedPage permission="documents:read">
+                <Documents />
+              </ProtectedPage>
+            }
+          />
+
+          <Route
+            path="/tasks"
+            element={
+              <ProtectedPage permission="tasks:read">
+                <Tasks />
+              </ProtectedPage>
+            }
+          />
         </Route>
       </Route>
 
-      <Route path="*" element={<NotFound />} />
+      <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
 }

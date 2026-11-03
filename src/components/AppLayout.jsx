@@ -1,74 +1,123 @@
-import { Layout, Menu, Typography, Avatar, Dropdown, Space } from "antd";
+import { Layout, Menu, Button, Typography, Space } from "antd";
 import {
   DashboardOutlined,
   TeamOutlined,
-  FileProtectOutlined,
+  FileTextOutlined,
   CheckSquareOutlined,
+  UserOutlined,
+  ApartmentOutlined,
   LogoutOutlined,
-  GlobalOutlined,
 } from "@ant-design/icons";
+
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+
 import { logout } from "../features/auth/authSlice";
-import { useLocation, useNavigate, Outlet } from "react-router-dom";
-const { Sider, Header, Content } = Layout;
-const items = [
-  { key: "/", icon: <DashboardOutlined />, label: "Dashboard" },
-  { key: "/employees", icon: <TeamOutlined />, label: "Employees" },
-  { key: "/documents", icon: <FileProtectOutlined />, label: "Documents" },
-  { key: "/tasks", icon: <CheckSquareOutlined />, label: "Renewals & Tasks" },
+import { hasPermission } from "../utils/permissions";
+
+const { Header, Sider, Content } = Layout;
+
+const menuItems = [
+  {
+    key: "/",
+    label: "Dashboard",
+    icon: <DashboardOutlined />,
+    permission: "dashboard:read",
+  },
+  {
+    key: "/organizations",
+    label: "Organizations",
+    icon: <ApartmentOutlined />,
+    permission: "organizations:manage",
+  },
+  {
+    key: "/users",
+    label: "Users",
+    icon: <UserOutlined />,
+    permission: "users:read",
+  },
+  {
+    key: "/employees",
+    label: "Employees",
+    icon: <TeamOutlined />,
+    permission: "employees:read",
+  },
+  {
+    key: "/documents",
+    label: "Documents",
+    icon: <FileTextOutlined />,
+    permission: "documents:read",
+  },
+  {
+    key: "/tasks",
+    label: "Tasks",
+    icon: <CheckSquareOutlined />,
+    permission: "tasks:read",
+  },
 ];
+
 export default function AppLayout() {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   const location = useLocation();
-  const user = useSelector((s) => s.auth.user);
+  const dispatch = useDispatch();
+
+  const user = useSelector((state) => state.auth.user);
+
+  const visibleItems = menuItems
+    .filter((item) => hasPermission(user?.role, item.permission))
+    .map(({ permission, ...item }) => item);
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate("/login", { replace: true });
+  };
+
   return (
     <Layout style={{ minHeight: "100vh" }}>
-      <Sider breakpoint="lg" collapsedWidth="0" theme="dark" width={245}>
-        <div className="brand">
-          <FileProtectOutlined />
-          <span>DocuTrack</span>
+      <Sider theme="light" breakpoint="lg" collapsedWidth="0">
+        <div style={{
+          padding: 20,
+          fontWeight: 700,
+          fontSize: 18,
+        }}>
+          DocuTrack
         </div>
+
         <Menu
-          theme="dark"
           mode="inline"
           selectedKeys={[location.pathname]}
-          items={items}
+          items={visibleItems}
           onClick={({ key }) => navigate(key)}
         />
-        <div className="sidebar-footer">Saudi Arabia · Compliance</div>
       </Sider>
+
       <Layout>
-        <Header className="topbar">
+        <Header style={{
+          background: "#fff",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "0 24px",
+        }}>
+          <Typography.Text strong>
+            {user?.name}
+          </Typography.Text>
+
           <Space>
-            <GlobalOutlined />
-            <Typography.Text>Saudi Arabia</Typography.Text>
-            <Typography.Text type="secondary">|</Typography.Text>
-            <Typography.Text>English</Typography.Text>
+            <Typography.Text type="secondary">
+              {user?.role?.replace("_", " ")}
+            </Typography.Text>
+
+            <Button
+              icon={<LogoutOutlined />}
+              onClick={handleLogout}
+            >
+              Logout
+            </Button>
           </Space>
-          <Dropdown
-            trigger={["click"]}
-            menu={{
-              items: [
-                {
-                  key: "logout",
-                  icon: <LogoutOutlined />,
-                  label: "Sign out",
-                  onClick: () => {
-                    dispatch(logout());
-                    navigate("/login", { replace: true });
-                  },
-                },
-              ],
-            }}
-          >
-            <Space style={{ cursor: "pointer" }}>
-              <Avatar>{user?.name?.charAt(0) || "U"}</Avatar>
-              <span>{user?.name || "Account"}</span>
-            </Space>
-          </Dropdown>
         </Header>
-        <Content className="page-content">
+
+        <Content style={{ padding: 24 }}>
           <Outlet />
         </Content>
       </Layout>

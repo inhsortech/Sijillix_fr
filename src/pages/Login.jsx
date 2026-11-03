@@ -1,26 +1,16 @@
-
+import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Navigate, useNavigate } from "react-router-dom";
 import {
-  Button,
   Card,
   Form,
   Input,
+  Button,
   Typography,
   Alert,
 } from "antd";
 
-import {
-  LockOutlined,
-  MailOutlined,
-} from "@ant-design/icons";
-
-import { useDispatch, useSelector } from "react-redux";
-
-import { loginUser, clearAuthError } from "../features/auth/authSlice";
-
-import {
-  Navigate,
-  useNavigate,
-} from "react-router-dom";
+import { loginUser } from "../features/auth/authSlice";
 
 const { Title, Text } = Typography;
 
@@ -28,48 +18,39 @@ export default function Login() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const {
-    loading,
-    error,
-    isAuthenticated,
-  } = useSelector((state) => state.auth);
+  const { loading, error, isAuthenticated } = useSelector(
+    (state) => state.auth
+  );
 
-  const [form] = Form.useForm();
+  const [credentials, setCredentials] = useState({
+    email: "",
+    password: "",
+  });
 
-  // Already logged in
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
   }
 
-  // Login submit
-  const submit = async (values) => {
+  const handleLogin = async () => {
     try {
-      await dispatch(loginUser(values)).unwrap();
-
-      form.resetFields();
-
+      await dispatch(loginUser(credentials)).unwrap();
       navigate("/", { replace: true });
-
-    } catch (error) {
-      console.error("Login error:", error);
+    } catch {
+      // Error is displayed from Redux state.
     }
   };
 
   return (
-    <div className="login-page">
-      <Card className="login-card">
-
-        <div className="login-logo">
-          DT
-        </div>
-
-        <Title level={2}>
-          DocuTrack Saudi
-        </Title>
-
-        <Text type="secondary">
-          Sign in to manage documents and compliance.
-        </Text>
+    <div style={{
+      minHeight: "100vh",
+      display: "grid",
+      placeItems: "center",
+      background: "#f3f5f9",
+      padding: 20,
+    }}>
+      <Card style={{ width: "100%", maxWidth: 420 }}>
+        <Title level={2}>DocuTrack Saudi</Title>
+        <Text type="secondary">Sign in to your account</Text>
 
         {error && (
           <Alert
@@ -77,76 +58,53 @@ export default function Login() {
             type="error"
             message={error}
             showIcon
-            closable
-            onClose={() => dispatch(clearAuthError())}
           />
         )}
 
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={submit}
-          onValuesChange={() => {
-            if (error) {
-              dispatch(clearAuthError());
-            }
-          }}
-          style={{ marginTop: 28 }}
-        >
-
-          {/* EMAIL */}
+        <Form layout="vertical" onFinish={handleLogin} style={{ marginTop: 25 }}>
           <Form.Item
+            label="Email"
             name="email"
-            label="Email address"
-            rules={[
-              {
-                required: true,
-                message: "Please enter your email",
-              },
-              {
-                type: "email",
-                message: "Please enter a valid email",
-              },
-            ]}
+            rules={[{ required: true, message: "Enter email" }]}
           >
             <Input
-              prefix={<MailOutlined />}
-              placeholder="you@company.com"
               size="large"
-              autoComplete="username"
+              value={credentials.email}
+              onChange={(e) =>
+                setCredentials({
+                  ...credentials,
+                  email: e.target.value,
+                })
+              }
             />
           </Form.Item>
 
-          {/* PASSWORD */}
           <Form.Item
-            name="password"
             label="Password"
-            rules={[
-              {
-                required: true,
-                message: "Please enter your password",
-              },
-            ]}
+            name="password"
+            rules={[{ required: true, message: "Enter password" }]}
           >
             <Input.Password
-              prefix={<LockOutlined />}
-              placeholder="Enter your password"
               size="large"
-              autoComplete="current-password"
+              value={credentials.password}
+              onChange={(e) =>
+                setCredentials({
+                  ...credentials,
+                  password: e.target.value,
+                })
+              }
             />
           </Form.Item>
 
-          {/* LOGIN BUTTON */}
           <Button
-            type="primary"
-            htmlType="submit"
             block
             size="large"
+            type="primary"
+            htmlType="submit"
             loading={loading}
           >
-            Sign in
+            Login
           </Button>
-
         </Form>
       </Card>
     </div>
