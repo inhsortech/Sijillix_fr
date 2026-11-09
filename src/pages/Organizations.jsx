@@ -157,7 +157,7 @@ export default function Organizations() {
           Add Organization
         </Button>
       }
-    >
+    > 
       <Table
         rowKey="_id"
         loading={loading}
